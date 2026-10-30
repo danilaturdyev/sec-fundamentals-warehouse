@@ -4,6 +4,47 @@ A small data warehouse that pulls **real annual financial statements from SEC ED
 
 The point of the project is the SQL: the Python part only moves data in; every number you see is produced by views you can read and test.
 
+## What does it tell you? (plain English)
+
+Companies publish hundreds of numbers in their annual reports. This project loads them, cleans them and answers questions such as *"Which company uses shareholders' money most efficiently?"* and *"Which companies are financially solid?"* with one command.
+
+| Measure | Plain meaning |
+|---|---|
+| **ROE** (return on equity) | Profit earned per £1 of shareholders' money |
+| **DuPont analysis** | Splits ROE into three causes: profit margin, how hard assets work (turnover), and debt (leverage) |
+| **Piotroski F-Score** | 9 yes/no tests of financial health (profitable? cash positive? less debt? ...), higher is better |
+| **Altman Z-Score** | Bankruptcy-risk score: `safe`, `grey` or `distress` |
+| **Peer ranking** | Ranks each company against others in its sector |
+| **Data-quality report** | Lists where the source data looks wrong or incomplete |
+
+### Sample results (SEC data loaded on 30 Oct 2026, latest fiscal year of each company)
+
+**Who earns most on shareholders' money, and why?** (`python run.py q1`)
+
+| Company | ROE | Net margin | Asset turnover | Equity multiplier | Main driver |
+|---|---|---|---|---|---|
+| Apple | 152% | 27% | 1.16 | 4.87 | leverage (share buybacks) |
+| Coca-Cola | 41% | 27% | 0.46 | 3.26 | margin |
+| PepsiCo | 40% | 9% | 0.88 | 5.26 | margin |
+| Chevron | 7% | 7% | 0.58 | 1.74 | turnover |
+
+Apple's headline ROE is very high mainly because of leverage, not because of higher profit margins: this is what the DuPont split reveals.
+
+**Which companies pass a quality screen?** (`python run.py q2`: at least 6 of 9 Piotroski signals and a "safe" Altman zone)
+
+| Company | Fiscal year | Piotroski | Altman Z'' | Zone |
+|---|---|---|---|---|
+| Alphabet | 2025 | 6/9 | 6.79 | safe |
+| Procter & Gamble | 2026 | 6/9 | 4.69 | safe |
+| Microsoft | 2026 | 6/9 | 4.59 | safe |
+| Coca-Cola | 2025 | 6/9 | 4.46 | safe |
+| Caterpillar | 2025 | 6/9 | 4.27 | safe |
+| Costco | 2026 | 6/9 | 2.83 | safe |
+
+Apple scores 8/9 on Piotroski but lands in the Altman "grey" zone (2.31): heavy buybacks shrink retained earnings, which the formula relies on. This is a known limitation of the score, not an error in the data.
+
+**Can the data be trusted?** (`python run.py dq`) The checks found, among other things, a balance-sheet mismatch for Microsoft FY2016 in the source filing and that Caterpillar changed its net-income tag after 2010 (handled with fallback tags).
+
 ## Architecture
 
 ```
@@ -72,14 +113,14 @@ python run.py q2
 ## Example questions answered (`sql/queries/`)
 
 1. Highest ROE, and is it driven by margin, asset turnover or leverage? (DuPont)
-2. Which companies pass a quality screen: F-Score ≥ 7 **and** Altman zone "safe"?
+2. Which companies pass a quality screen: at least 6 of 9 Piotroski signals **and** Altman zone "safe"?
 3. Fastest 3-year revenue growers in each sector and their cash conversion.
 4. Whose operating margin expanded three years in a row?
 5. Sector scoreboard: median margin / ROE and Altman zones.
 
 ## Tests
 
-`tests/` builds three **fictional** companies with known numbers (one that improves on all nine Piotroski signals, one that deteriorates, one with a missing year) and asserts exact results: F-Score 9 vs 0, the Altman formula by hand, restatement handling, 10-Q rows ignored, gap detection, ranking order.
+`tests/` builds five **fictional** companies with known numbers (one that improves on all nine Piotroski signals, one that deteriorates, one with a missing year, and two that report under fallback XBRL tags or without cost of revenue) and asserts exact results: F-Score 9 vs 0, the Altman formula by hand, restatement handling, 10-Q rows ignored, gap detection, tag fallbacks, ranking order (24 tests).
 
 ```bash
 export TEST_DSN="postgresql://postgres:postgres@localhost:5432/postgres"
