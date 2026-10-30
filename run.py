@@ -4,8 +4,10 @@
     python run.py load       download SEC data and load it (needs SEC_USER_AGENT)
     python run.py dq         data-quality report
     python run.py q1 .. q5   example analytical queries
+    python run.py export     save the scorecard to output/scorecard.csv (opens in Excel)
     python run.py all        schema + load + dq
 """
+import csv
 import glob
 import os
 import subprocess
@@ -60,6 +62,39 @@ def dq():
     conn.close()
 
 
+EXPORT_SQL = """
+SELECT k.ticker, k.sector, k.fiscal_year,
+       r.revenue, r.net_income,
+       r.gross_margin, r.operating_margin, r.net_margin, r.roe, r.revenue_cagr_3y,
+       p.f_score, p.f_signals, p.f_label,
+       a.z_score, a.zone,
+       k.composite, k.rank_in_sector
+FROM v_peer_ranking k
+JOIN v_ratios r ON r.ticker = k.ticker AND r.fiscal_year = k.fiscal_year
+LEFT JOIN v_piotroski p ON p.ticker = k.ticker AND p.fiscal_year = k.fiscal_year
+LEFT JOIN v_altman a ON a.ticker = k.ticker AND a.fiscal_year = k.fiscal_year
+ORDER BY k.sector, k.rank_in_sector
+"""
+
+
+def export():
+    """Latest-year scorecard for every company, as a CSV that Excel opens directly."""
+    os.makedirs("output", exist_ok=True)
+    conn = psycopg2.connect(DSN)
+    with conn, conn.cursor() as cur:
+        cur.execute("SET search_path = fw, public")
+        cur.execute(EXPORT_SQL)
+        header = [d[0] for d in cur.description]
+        rows = cur.fetchall()
+    conn.close()
+    path = os.path.join("output", "scorecard.csv")
+    with open(path, "w", newline="", encoding="utf-8-sig") as fh:   # utf-8-sig: Excel-friendly
+        w = csv.writer(fh)
+        w.writerow(header)
+        w.writerows(rows)
+    print(f"saved {len(rows)} companies to {path}")
+
+
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "all"
     if cmd == "schema":
@@ -68,6 +103,8 @@ def main():
         load()
     elif cmd == "dq":
         dq()
+    elif cmd == "export":
+        export()
     elif cmd == "all":
         schema(); load(); dq()
     elif cmd in {"q1", "q2", "q3", "q4", "q5"}:
