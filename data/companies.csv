@@ -1,0 +1,18 @@
+ticker,cik,name,sector
+AAPL,320193,Apple Inc.,Technology
+MSFT,789019,Microsoft Corporation,Technology
+NVDA,1045810,NVIDIA Corporation,Technology
+GOOGL,1652044,Alphabet Inc.,Technology
+META,1326801,Meta Platforms Inc.,Technology
+KO,21344,The Coca-Cola Company,Consumer Staples
+PEP,77476,PepsiCo Inc.,Consumer Staples
+PG,80424,The Procter & Gamble Company,Consumer Staples
+WMT,104169,Walmart Inc.,Consumer Staples
+COST,909832,Costco Wholesale Corporation,Consumer Staples
+JNJ,200406,Johnson & Johnson,Health Care
+PFE,78003,Pfizer Inc.,Health Care
+XOM,34088,Exxon Mobil Corporation,Energy
+CVX,93410,Chevron Corporation,Energy
+CAT,18230,Caterpillar Inc.,Industrials
+HON,773840,Honeywell International Inc.,Industrials
+UPS,1090727,United Parcel Service Inc.,Industrials
